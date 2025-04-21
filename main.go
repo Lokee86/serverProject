@@ -13,15 +13,16 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router := http.NewServeMux()
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(pathRoot)))
 	router.Handle("/app/", apiCfg.serverHitCounter(handler))
-	router.HandleFunc("/metrics", apiCfg.metricsHandler)
-	router.HandleFunc("/reset", apiCfg.resetCounter)
-	router.HandleFunc("/healthz", healthCheck)
+	router.HandleFunc("GET /admin/metrics", apiCfg.metricsHandler)
+	router.HandleFunc("GET /api/healthz", healthCheck)
+	router.HandleFunc("POST /admin/reset", apiCfg.resetCounter)
 	return &http.Server{
 		Addr:    port,
 		Handler: router,
 	}
 }
 
+// EXECUTE MAIN FUNCTION
 func main() {
 	apiCfg := &apiConfig{}
 	server := createServer(apiCfg)

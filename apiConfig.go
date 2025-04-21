@@ -23,14 +23,21 @@ func (a *apiConfig) serverHitCounter(next http.Handler) http.Handler {
 func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request) {
 	log.Printf("Hits: %v", a.fileServerHits.Load())
 	response.WriteHeader(http.StatusOK)
-	response.Write([]byte(fmt.Sprintf("Hits: %v", a.fileServerHits.Load())))
+	response.Header().Set("Content-Type", "text/html")
+	response.Write([]byte(fmt.Sprintf(
+		`<html>
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	</body>
+</html>`, a.fileServerHits.Load())))
 }
 
 // reset counter
 func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) {
 	a.fileServerHits.Store(0)
 	response.WriteHeader(http.StatusOK)
-	response.Write([]byte("Hits coutner reset to 0"))
+	response.Write([]byte("Hits counter reset to 0"))
 	log.Println("Hit counter reset to 0")
 
 }
