@@ -24,13 +24,13 @@ func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request
 	log.Printf("Hits: %v", a.fileServerHits.Load())
 	response.WriteHeader(http.StatusOK)
 	response.Header().Set("Content-Type", "text/html")
-	response.Write([]byte(fmt.Sprintf(
+	response.Write(fmt.Appendf(nil,
 		`<html>
 	<body>
 		<h1>Welcome, Chirpy Admin</h1>
 		<p>Chirpy has been visited %d times!</p>
 	</body>
-</html>`, a.fileServerHits.Load())))
+</html>`, a.fileServerHits.Load()))
 }
 
 // reset counter
