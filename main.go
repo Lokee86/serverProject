@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 const pathRoot = "."
@@ -37,14 +38,6 @@ func main() {
 }
 
 func validateChirp(response http.ResponseWriter, r *http.Request) {
-	type validChirp struct {
-		Valid bool `json:"valid"`
-	}
-
-	type invalidChirp struct {
-		Error string `json:"error"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
 	checkedChirp := chirp{}
 	err := decoder.Decode(&checkedChirp)
@@ -54,30 +47,35 @@ func validateChirp(response http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(checkedChirp.Body) <= 140 {
-		chirp := validChirp{Valid: true}
-		jsonData, err := json.Marshal(chirp)
-		if err != nil {
-			log.Printf("Internal Server Error: %v", err)
-			response.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		response.WriteHeader(http.StatusOK)
-		response.Write(jsonData)
-	}
-
 	if len(checkedChirp.Body) > 140 {
-		chirp := invalidChirp{Error: "Chirp is too long"}
-		jsonData, err := json.Marshal(chirp)
-		if err != nil {
-			log.Printf("Internal Server Error: %v", err)
-			response.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		response.WriteHeader(http.StatusBadRequest)
-		response.Write(jsonData)
-
+		errorResponse(response, http.StatusBadRequest, "Chirp is too long")
+		return
 	}
 	log.Println("Chirp validated")
 
+	if len(checkedChirp.Body) <= 140 {
+		checkProfanity(checkedChirp, response)
+	}
+
+}
+
+func checkProfanity(chirp chirp, response http.ResponseWriter) {
+	type cleanedChirp struct {
+		CleanedBody string `json:"cleaned_body"`
+	}
+
+	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
+	listToCheck := strings.Split(chirp.Body, " ")
+	for i, word := range listToCheck {
+		for _, badWord := range profaneWords {
+			if strings.ToLower(word) == badWord {
+				listToCheck[i] = "****"
+			}
+		}
+	}
+	newChirpBody := strings.Join(listToCheck, " ")
+	newChirp := cleanedChirp{}
+	newChirp.CleanedBody = newChirpBody
+	log.Println("Profanity cleaned from chirp")
+	jsonResponse(response, http.StatusOK, newChirp)
 }
