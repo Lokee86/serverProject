@@ -24,6 +24,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("GET /api/healthz", healthCheck)
 	router.HandleFunc("POST /admin/reset", apiCfg.resetCounter)
 	router.HandleFunc("POST /api/chirps", apiCfg.validateChirp)
+	router.HandleFunc("GET /api/chirps", apiCfg.fetchChirps)
 	router.HandleFunc("POST /api/users", apiCfg.createUserHandler)
 	return &http.Server{
 		Addr:    port,

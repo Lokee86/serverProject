@@ -38,6 +38,15 @@ type tempChirp struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
+func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
+	chirps, err := a.databaseQueries.GetAllChirps(r.Context())
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	jsonResponse(response, http.StatusOK, chirps)
+}
+
 func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)

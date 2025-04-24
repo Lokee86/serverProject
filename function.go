@@ -16,19 +16,19 @@ func healthCheck(response http.ResponseWriter, r *http.Request) {
 func checkProfanity(chirp *string) {
 	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
 	listToCheck := strings.Split(*chirp, " ")
-	// profanity := false
+	profanity := false
 	for i, word := range listToCheck {
 		for _, badWord := range profaneWords {
 			if strings.ToLower(word) == badWord {
 				listToCheck[i] = "****"
-				// profanity = true
+				profanity = true
 			}
 		}
 	}
 	*chirp = strings.Join(listToCheck, " ")
-	// if profanity {
-	log.Println("Profanity cleaned from chirp")
-	// }
+	if profanity {
+		log.Println("Profanity cleaned from chirp")
+	}
 }
 
 func jsonResponse(response http.ResponseWriter, code int, payload interface{}) {
