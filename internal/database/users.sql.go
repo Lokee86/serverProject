@@ -32,7 +32,7 @@ func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 	return i, err
 }
 
-const resetUsers = `-- name: resetUsers :exec
+const resetUsers = `-- name: ResetUsers :exec
 DELETE FROM users
 `
 

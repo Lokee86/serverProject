@@ -25,6 +25,58 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"create_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+type tempChirp struct {
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
+
+	decoder := json.NewDecoder(r.Body)
+	checkedChirp := tempChirp{}
+	err := decoder.Decode(&checkedChirp)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+
+	if len(checkedChirp.Body) > 140 {
+		errorResponse(response, http.StatusBadRequest, "Chirp is too long")
+		return
+	}
+	log.Println("Chirp validated")
+	checkProfanity(&checkedChirp.Body)
+	a.addChirp(response, checkedChirp, r)
+}
+
+func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp tempChirp, r *http.Request) {
+	compatibleChirp := database.CreateChirpParams{
+		Body:   checkedChirp.Body,
+		UserID: checkedChirp.UserID,
+	}
+	chirp, err := a.databaseQueries.CreateChirp(r.Context(), compatibleChirp)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	jsonSafeChirp := Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	}
+	jsonResponse(response, http.StatusCreated, jsonSafeChirp)
+}
+
 // increment hit counter
 func (a *apiConfig) serverHitCounter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -13,47 +13,22 @@ func healthCheck(response http.ResponseWriter, r *http.Request) {
 	log.Println("Health check OK")
 }
 
-func validateChirp(response http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	checkedChirp := chirp{}
-	err := decoder.Decode(&checkedChirp)
-	if err != nil {
-		log.Printf("Internal Server Error: %v", err)
-		response.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if len(checkedChirp.Body) > 140 {
-		errorResponse(response, http.StatusBadRequest, "Chirp is too long")
-		return
-	}
-	log.Println("Chirp validated")
-
-	if len(checkedChirp.Body) <= 140 {
-		checkProfanity(checkedChirp, response)
-	}
-
-}
-
-func checkProfanity(chirp chirp, response http.ResponseWriter) {
-	type cleanedChirp struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
-
+func checkProfanity(chirp *string) {
 	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
-	listToCheck := strings.Split(chirp.Body, " ")
+	listToCheck := strings.Split(*chirp, " ")
+	// profanity := false
 	for i, word := range listToCheck {
 		for _, badWord := range profaneWords {
 			if strings.ToLower(word) == badWord {
 				listToCheck[i] = "****"
+				// profanity = true
 			}
 		}
 	}
-	newChirpBody := strings.Join(listToCheck, " ")
-	newChirp := cleanedChirp{}
-	newChirp.CleanedBody = newChirpBody
+	*chirp = strings.Join(listToCheck, " ")
+	// if profanity {
 	log.Println("Profanity cleaned from chirp")
-	jsonResponse(response, http.StatusOK, newChirp)
+	// }
 }
 
 func jsonResponse(response http.ResponseWriter, code int, payload interface{}) {
@@ -74,4 +49,10 @@ func errorResponse(response http.ResponseWriter, code int, mesg string) {
 	}
 
 	jsonResponse(response, code, error{Error: mesg})
+}
+
+func internalError(response http.ResponseWriter, err error) {
+	log.Printf("Internal Server Error: %v", err)
+	response.WriteHeader(http.StatusInternalServerError)
+	response.Write([]byte(err.Error()))
 }

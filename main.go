@@ -14,10 +14,6 @@ import (
 const pathRoot = "."
 const port = ":8080"
 
-type chirp struct {
-	Body string `json:"body"`
-}
-
 // Create router and server
 func createServer(apiCfg *apiConfig) *http.Server {
 	router := http.NewServeMux()
@@ -27,7 +23,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("GET /admin/metrics", apiCfg.metricsHandler)
 	router.HandleFunc("GET /api/healthz", healthCheck)
 	router.HandleFunc("POST /admin/reset", apiCfg.resetCounter)
-	router.HandleFunc("POST /api/validate_chirp", validateChirp)
+	router.HandleFunc("POST /api/chirps", apiCfg.validateChirp)
 	router.HandleFunc("POST /api/users", apiCfg.createUserHandler)
 	return &http.Server{
 		Addr:    port,
