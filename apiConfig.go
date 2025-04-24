@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -44,7 +45,34 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 		internalError(response, err)
 		return
 	}
-	jsonResponse(response, http.StatusOK, chirps)
+	var jsonSafeChirps []Chirp
+	for _, chirp := range chirps {
+		jsonSafeChirp := jsonSafeChirp(chirp)
+		jsonSafeChirps = append(jsonSafeChirps, jsonSafeChirp)
+	}
+	jsonResponse(response, http.StatusOK, jsonSafeChirps)
+}
+
+func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	if len(parts) < 4 || parts[3] == "" {
+		errorResponse(response, http.StatusBadRequest, "chirp ID missing")
+		return
+	}
+	idStr, err := uuid.Parse(parts[3])
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+
+	chirp, err := a.databaseQueries.SelectSingleChirp(r.Context(), idStr)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	jsonSafeChirp := jsonSafeChirp(chirp)
+	jsonResponse(response, http.StatusOK, jsonSafeChirp)
 }
 
 func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
@@ -76,13 +104,7 @@ func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp tempChir
 		internalError(response, err)
 		return
 	}
-	jsonSafeChirp := Chirp{
-		ID:        chirp.ID,
-		CreatedAt: chirp.CreatedAt,
-		UpdatedAt: chirp.UpdatedAt,
-		Body:      chirp.Body,
-		UserID:    chirp.UserID,
-	}
+	jsonSafeChirp := jsonSafeChirp(chirp)
 	jsonResponse(response, http.StatusCreated, jsonSafeChirp)
 }
 

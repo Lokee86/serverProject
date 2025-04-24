@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/Lokee86/serverProject/internal/database"
 )
 
 func healthCheck(response http.ResponseWriter, r *http.Request) {
@@ -55,4 +57,15 @@ func internalError(response http.ResponseWriter, err error) {
 	log.Printf("Internal Server Error: %v", err)
 	response.WriteHeader(http.StatusInternalServerError)
 	response.Write([]byte(err.Error()))
+}
+
+func jsonSafeChirp(chirp database.Chirp) Chirp {
+	jsonSafeChirp := Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	}
+	return jsonSafeChirp
 }
