@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileServerHits  atomic.Int32
 	databaseQueries *database.Queries
+	platform        string
 }
 
 type User struct {
@@ -48,7 +49,16 @@ func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request
 
 // reset counter
 func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) {
+	if a.platform != "dev" {
+		http.Error(response, "Unauthorized Access", http.StatusForbidden)
+		return
+	}
 	a.fileServerHits.Store(0)
+	err := a.databaseQueries.ResetUsers(r.Context())
+	if err != nil {
+		log.Printf("Error resetting 'users': %v", err)
+		http.Error(response, "failed to create user", http.StatusInternalServerError)
+	}
 	response.WriteHeader(http.StatusOK)
 	response.Write([]byte("Hits counter reset to 0"))
 	log.Println("Hit counter reset to 0")

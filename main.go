@@ -46,6 +46,7 @@ func main() {
 	apiCfg := &apiConfig{}
 	apiCfg.databaseQueries = database.New(db)
 	server := createServer(apiCfg)
+	apiCfg.platform = os.Getenv("PLATFORM")
 	log.Printf("Server running on Port%v from %v", port, pathRoot)
 	log.Fatal(server.ListenAndServe())
 }
