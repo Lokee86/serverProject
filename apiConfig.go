@@ -158,14 +158,12 @@ func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Requ
 	params := createNewUser{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Printf("Error decoding Json: %v", err)
-		http.Error(response, "failed to decode Json", http.StatusInternalServerError)
+		internalError(response, err)
 		return
 	}
 	newUser, err := a.databaseQueries.CreateUser(r.Context(), params.Email)
 	if err != nil {
-		log.Printf("Error creating user: %v", err)
-		http.Error(response, "failed to create user", http.StatusInternalServerError)
+		internalError(response, err)
 		return
 	}
 	newUserJson := User{
@@ -175,13 +173,6 @@ func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Requ
 		Email:     newUser.Email,
 	}
 
-	response.WriteHeader(http.StatusCreated)
-	newUserData, err := json.Marshal(newUserJson)
-	if err != nil {
-		log.Printf("Error encoding response: %v", err)
-		http.Error(response, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
-	response.Write(newUserData)
+	jsonResponse(response, http.StatusCreated, newUserJson)
 
 }
