@@ -1,8 +1,0 @@
--- name: CreateRefreshToken :exec
-INSERT INTO refresh_tokens (
-    token,
-    user_id,
-    expires_at
-) VALUES (
-    $1, $2, $3
-);
