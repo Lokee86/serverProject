@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileServerHits  atomic.Int32
 	databaseQueries *database.Queries
 	platform        string
+	polkaKey        string
 }
 
 type token struct {

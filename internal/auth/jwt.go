@@ -54,6 +54,14 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return strings.TrimPrefix(authHeader, "Bearer "), nil
 }
 
+func GetAPIKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "ApiKey ") {
+		return "", errors.New("authorization header missing ApiKey prefix")
+	}
+	return strings.TrimPrefix(authHeader, "ApiKey "), nil
+}
+
 func keyFunc(t *jwt.Token) (interface{}, error) {
 	if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected signing method")

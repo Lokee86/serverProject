@@ -55,6 +55,7 @@ func main() {
 	if auth.TokenSecret == "" {
 		log.Fatal("JWT_SECRET is not set")
 	}
+	apiCfg.polkaKey = os.Getenv("POLKA_KEY")
 	log.Printf("Server running on Port%v from %v", port, pathRoot)
 	log.Fatal(server.ListenAndServe())
 }

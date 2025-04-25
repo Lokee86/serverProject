@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -144,9 +145,19 @@ func (a *apiConfig) upgradeAccount(response http.ResponseWriter, r *http.Request
 		} `json:"data"`
 	}
 
+	incKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, fmt.Sprintf("Unauthorized: %v", err.Error()))
+		return
+	}
+	if incKey != a.polkaKey {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid API key")
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	upgradeData := Upgrade{}
-	err := decoder.Decode(&upgradeData)
+	err = decoder.Decode(&upgradeData)
 	if err != nil {
 		internalError(response, err)
 		return
