@@ -37,7 +37,7 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 		jsonSafeChirp := jsonSafeChirp(chirp)
 		jsonSafeChirps = append(jsonSafeChirps, jsonSafeChirp)
 	}
-	jsonResponse(response, http.StatusOK, jsonSafeChirps)
+	jsonResponse(response, http.StatusOK, jsonSafeChirps, "All Chirps fetched")
 }
 
 // fetches a single chirp by id from table 'chirps' in database
@@ -60,7 +60,7 @@ func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Reque
 		return
 	}
 	jsonSafeChirp := jsonSafeChirp(chirp)
-	jsonResponse(response, http.StatusOK, jsonSafeChirp)
+	jsonResponse(response, http.StatusOK, jsonSafeChirp, "Single chirp query successful")
 }
 
 // validates length of submitted chirp
@@ -75,7 +75,7 @@ func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request)
 	}
 	checkedChirp.UserID, err = auth.ValidateJWT(userToken)
 	if err != nil {
-		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid access token")
 		return
 	}
 
@@ -108,5 +108,5 @@ func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleCh
 		return
 	}
 	jsonSafeChirp := jsonSafeChirp(chirp)
-	jsonResponse(response, http.StatusCreated, jsonSafeChirp)
+	jsonResponse(response, http.StatusCreated, jsonSafeChirp, "Chirp added successfully")
 }

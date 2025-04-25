@@ -47,7 +47,8 @@ func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request
 // reset file server hit counter
 func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) {
 	if a.platform != "dev" {
-		http.Error(response, "Unauthorized Access", http.StatusForbidden)
+		http.Error(response, "Unauthorized Reset Access", http.StatusForbidden)
+		log.Println("Unauthorized Reset Access")
 		return
 	}
 	a.fileServerHits.Store(0)
@@ -71,16 +72,17 @@ func (a *apiConfig) refreshHandler(response http.ResponseWriter, r *http.Request
 	}
 	fullRefreshToken, err := a.databaseQueries.GetRefreshToken(r.Context(), refreshToken)
 	if err == sql.ErrNoRows {
-		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Refresh token not found")
 		return
 	} else if fullRefreshToken.RevokedAt.Valid {
-		errorResponse(response, http.StatusUnauthorized, "refresh token revoked")
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Refresh token revoked")
+		return
 	} else if err != nil {
 		internalError(response, err)
 		return
 	}
 	if time.Now().After(fullRefreshToken.ExpiresAt) {
-		errorResponse(response, http.StatusUnauthorized, "Unauthorize")
+		errorResponse(response, http.StatusUnauthorized, "Unauthorize: Refresh token expired")
 		return
 	}
 	newAccessTokenValue, err := auth.MakeJWT(fullRefreshToken.UserID, 60*time.Minute)
@@ -91,7 +93,7 @@ func (a *apiConfig) refreshHandler(response http.ResponseWriter, r *http.Request
 	newAccessToken := token{
 		Token: newAccessTokenValue,
 	}
-	jsonResponse(response, http.StatusOK, newAccessToken)
+	jsonResponse(response, http.StatusOK, newAccessToken, "Access token refresehd.")
 }
 
 // revoke refresh tokens
@@ -107,4 +109,5 @@ func (a *apiConfig) revokeHandler(response http.ResponseWriter, r *http.Request)
 		return
 	}
 	response.WriteHeader(http.StatusNoContent)
+	log.Println("204 Reponse successfuly sent")
 }

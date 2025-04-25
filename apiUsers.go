@@ -50,7 +50,7 @@ func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Requ
 	}
 	newUserJson := jsonReturnUser(newUser)
 
-	jsonResponse(response, http.StatusCreated, newUserJson)
+	jsonResponse(response, http.StatusCreated, newUserJson, "New user created successfully")
 
 }
 
@@ -70,7 +70,7 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 	}
 	err = auth.CheckPasswordHash(user.HashedPassword, params.Password)
 	if err != nil {
-		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Incorrect Password")
 		return
 	}
 	loggedInUser := jsonReturnUser(user)
@@ -96,5 +96,5 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	jsonResponse(response, http.StatusOK, loggedInUser)
+	jsonResponse(response, http.StatusOK, loggedInUser, "User logged in successfully")
 }

@@ -36,14 +36,14 @@ func checkProfanity(chirp *string) {
 }
 
 // send 200 range code response to client with json payload
-func jsonResponse(response http.ResponseWriter, code int, payload interface{}) {
+func jsonResponse(response http.ResponseWriter, code int, payload interface{}, mesg string) {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Internal Server Error: %v", err)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Status: %v JSON successfully sent", code)
+	log.Printf("Status: %v JSON successfully sent. %v", code, mesg)
 	response.WriteHeader(code)
 	response.Write(jsonData)
 }
@@ -54,7 +54,7 @@ func errorResponse(response http.ResponseWriter, code int, mesg string) {
 		Error string `json:"error"`
 	}
 
-	jsonResponse(response, code, error{Error: mesg})
+	jsonResponse(response, code, error{Error: mesg}, mesg)
 }
 
 // internal server error, server error and log event
