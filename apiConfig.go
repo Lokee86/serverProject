@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Lokee86/serverProject/internal/auth"
 	"github.com/Lokee86/serverProject/internal/database"
 	"github.com/google/uuid"
 )
@@ -34,9 +35,14 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-type tempChirp struct {
+type handleChirp struct {
 	Body   string    `json:"body"`
 	UserID uuid.UUID `json:"user_id"`
+}
+
+type handleUser struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
@@ -78,7 +84,7 @@ func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Reque
 func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
-	checkedChirp := tempChirp{}
+	checkedChirp := handleChirp{}
 	err := decoder.Decode(&checkedChirp)
 	if err != nil {
 		internalError(response, err)
@@ -94,7 +100,7 @@ func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request)
 	a.addChirp(response, checkedChirp, r)
 }
 
-func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp tempChirp, r *http.Request) {
+func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleChirp, r *http.Request) {
 	compatibleChirp := database.CreateChirpParams{
 		Body:   checkedChirp.Body,
 		UserID: checkedChirp.UserID,
@@ -150,29 +156,52 @@ func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) 
 
 // create user
 func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Request) {
-	type createNewUser struct {
-		Email string `json:"email"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
-	params := createNewUser{}
+	params := handleUser{}
 	err := decoder.Decode(&params)
 	if err != nil {
 		internalError(response, err)
 		return
 	}
-	newUser, err := a.databaseQueries.CreateUser(r.Context(), params.Email)
+	hashedPassword, err := auth.HashPassword(params.Password)
 	if err != nil {
 		internalError(response, err)
 		return
 	}
-	newUserJson := User{
-		ID:        newUser.ID,
-		CreatedAt: newUser.CreatedAt,
-		UpdatedAt: newUser.UpdatedAt,
-		Email:     newUser.Email,
+	compatibleParams := database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
 	}
+	newUser, err := a.databaseQueries.CreateUser(r.Context(), compatibleParams)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	newUserJson := jsonReturnUser(newUser)
 
 	jsonResponse(response, http.StatusCreated, newUserJson)
+
+}
+
+func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	params := handleUser{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	user, err := a.databaseQueries.GetUserByEmail(r.Context(), params.Email)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	err = auth.CheckPasswordHash(user.HashedPassword, params.Password)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	loggedInUser := jsonReturnUser(user)
+	jsonResponse(response, http.StatusOK, loggedInUser)
 
 }

@@ -1,0 +1,51 @@
+package auth
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
+)
+
+var TokenSecret string
+
+func init() {
+	godotenv.Load()
+	TokenSecret = os.Getenv("JWT_SECRET")
+}
+
+func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+	claims := jwt.RegisteredClaims{
+		Subject:   userID.String(),
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err := token.SignedString([]byte(tokenSecret))
+	if err != nil {
+		return "", err
+	}
+	return signedToken, nil
+}
+
+func ValidateJWT(tokenString string) (uuid.UUID, error) {
+	claims := &jwt.RegisteredClaims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return uuid.Parse(claims.Subject)
+}
+
+func keyFunc(t *jwt.Token) (interface{}, error) {
+	if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("unexpected signing method")
+	}
+	return []byte(TokenSecret), nil
+}

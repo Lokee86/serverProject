@@ -69,3 +69,13 @@ func jsonSafeChirp(chirp database.Chirp) Chirp {
 	}
 	return jsonSafeChirp
 }
+
+func jsonReturnUser(user database.User) User {
+	newUserJson := User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	}
+	return newUserJson
+}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Lokee86/serverProject/internal/auth"
 	"github.com/Lokee86/serverProject/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -27,6 +28,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("GET /api/chirps/", apiCfg.fetchChirps)
 	router.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.fetchSingleChirp)
 	router.HandleFunc("POST /api/users", apiCfg.createUserHandler)
+	router.HandleFunc("POST /api/login", apiCfg.loginHandler)
 	return &http.Server{
 		Addr:    port,
 		Handler: router,
@@ -45,6 +47,9 @@ func main() {
 	apiCfg.databaseQueries = database.New(db)
 	server := createServer(apiCfg)
 	apiCfg.platform = os.Getenv("PLATFORM")
+	if auth.TokenSecret == "" {
+		log.Fatal("JWT_SECRET is not set")
+	}
 	log.Printf("Server running on Port%v from %v", port, pathRoot)
 	log.Fatal(server.ListenAndServe())
 }
