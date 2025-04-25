@@ -88,9 +88,22 @@ func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Reque
 // validates length of submitted chirp
 func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
 
-	decoder := json.NewDecoder(r.Body)
 	checkedChirp := handleChirp{}
-	err := decoder.Decode(&checkedChirp)
+
+	userToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	checkedChirp.UserID, err = auth.ValidateJWT(userToken)
+	// log.Println(err.Error())
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&checkedChirp)
 	if err != nil {
 		internalError(response, err)
 		return
@@ -114,6 +127,7 @@ func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleCh
 	chirp, err := a.databaseQueries.CreateChirp(r.Context(), compatibleChirp)
 	if err != nil {
 		internalError(response, err)
+		log.Println("Database Insertion Error")
 		return
 	}
 	jsonSafeChirp := jsonSafeChirp(chirp)
@@ -217,7 +231,7 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 		expiry = params.ExpiresinSeconds
 	}
 	loggedInUser := jsonReturnUser(user)
-	token, err := auth.MakeJWT(loggedInUser.ID, time.Duration(expiry))
+	token, err := auth.MakeJWT(loggedInUser.ID, time.Duration(expiry)*time.Second)
 	if err != nil {
 		internalError(response, err)
 		return
