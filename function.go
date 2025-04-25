@@ -9,12 +9,14 @@ import (
 	"github.com/Lokee86/serverProject/internal/database"
 )
 
+// readiness end point response - 200 OK
 func healthCheck(response http.ResponseWriter, r *http.Request) {
 	response.WriteHeader(http.StatusOK)
 	response.Write([]byte("OK"))
 	log.Println("Health check OK")
 }
 
+// check and filter profanity, no return, modifies at memory address
 func checkProfanity(chirp *string) {
 	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
 	listToCheck := strings.Split(*chirp, " ")
@@ -33,6 +35,7 @@ func checkProfanity(chirp *string) {
 	}
 }
 
+// send 200 range code response to client with json payload
 func jsonResponse(response http.ResponseWriter, code int, payload interface{}) {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -45,6 +48,7 @@ func jsonResponse(response http.ResponseWriter, code int, payload interface{}) {
 	response.Write(jsonData)
 }
 
+// send error code and message to client
 func errorResponse(response http.ResponseWriter, code int, mesg string) {
 	type error struct {
 		Error string `json:"error"`
@@ -53,12 +57,14 @@ func errorResponse(response http.ResponseWriter, code int, mesg string) {
 	jsonResponse(response, code, error{Error: mesg})
 }
 
+// internal server error, server error and log event
 func internalError(response http.ResponseWriter, err error) {
 	log.Printf("Internal Server Error: %v", err)
 	response.WriteHeader(http.StatusInternalServerError)
 	response.Write([]byte(err.Error()))
 }
 
+// Parse generated Chirp struct into local json controlled Chirp struct
 func jsonSafeChirp(chirp database.Chirp) Chirp {
 	jsonSafeChirp := Chirp{
 		ID:        chirp.ID,
@@ -70,6 +76,7 @@ func jsonSafeChirp(chirp database.Chirp) Chirp {
 	return jsonSafeChirp
 }
 
+// Parse generated User struct into local json controled User struct - no HashedPassword field transferred
 func jsonReturnUser(user database.User) User {
 	newUserJson := User{
 		ID:        user.ID,

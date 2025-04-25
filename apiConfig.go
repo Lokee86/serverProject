@@ -25,6 +25,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 type Chirp struct {
@@ -41,10 +42,12 @@ type handleChirp struct {
 }
 
 type handleUser struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresinSeconds int32  `json:"expires_in_seconds"`
 }
 
+// fetches all chirps from table 'chirps' in database
 func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 	chirps, err := a.databaseQueries.GetAllChirps(r.Context())
 	if err != nil {
@@ -59,6 +62,7 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 	jsonResponse(response, http.StatusOK, jsonSafeChirps)
 }
 
+// fetches a single chirp by id from table 'chirps' in database
 func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(path, "/")
@@ -81,6 +85,7 @@ func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Reque
 	jsonResponse(response, http.StatusOK, jsonSafeChirp)
 }
 
+// validates length of submitted chirp
 func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
@@ -100,6 +105,7 @@ func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request)
 	a.addChirp(response, checkedChirp, r)
 }
 
+// adds chirp to table 'chirps' in database
 func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleChirp, r *http.Request) {
 	compatibleChirp := database.CreateChirpParams{
 		Body:   checkedChirp.Body,
@@ -114,7 +120,7 @@ func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleCh
 	jsonResponse(response, http.StatusCreated, jsonSafeChirp)
 }
 
-// increment hit counter
+// increment file server hit counter
 func (a *apiConfig) serverHitCounter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a.fileServerHits.Add(1)
@@ -122,7 +128,7 @@ func (a *apiConfig) serverHitCounter(next http.Handler) http.Handler {
 	})
 }
 
-// metrics handler
+// metrics handler serves metrics to admins
 func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request) {
 	log.Printf("Hits: %v", a.fileServerHits.Load())
 	response.WriteHeader(http.StatusOK)
@@ -136,7 +142,7 @@ func (a *apiConfig) metricsHandler(response http.ResponseWriter, r *http.Request
 </html>`, a.fileServerHits.Load()))
 }
 
-// reset counter
+// reset file server hit counter
 func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) {
 	if a.platform != "dev" {
 		http.Error(response, "Unauthorized Access", http.StatusForbidden)
@@ -154,7 +160,7 @@ func (a *apiConfig) resetCounter(response http.ResponseWriter, r *http.Request) 
 
 }
 
-// create user
+// create new user in the database
 func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := handleUser{}
@@ -183,6 +189,7 @@ func (a *apiConfig) createUserHandler(response http.ResponseWriter, r *http.Requ
 
 }
 
+// handle login requests
 func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := handleUser{}
@@ -201,7 +208,20 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+	var expiry int32
+	if params.ExpiresinSeconds == 0 {
+		expiry = 3600
+	} else if params.ExpiresinSeconds > 3600 {
+		expiry = 3600
+	} else {
+		expiry = params.ExpiresinSeconds
+	}
 	loggedInUser := jsonReturnUser(user)
+	token, err := auth.MakeJWT(loggedInUser.ID, time.Duration(expiry))
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	loggedInUser.Token = token
 	jsonResponse(response, http.StatusOK, loggedInUser)
-
 }

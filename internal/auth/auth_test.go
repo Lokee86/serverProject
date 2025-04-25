@@ -21,7 +21,7 @@ func TestMakeAndValidateJWT(t *testing.T) {
 	userID := uuid.New()
 	expires := time.Minute
 
-	token, err := MakeJWT(userID, secret, expires)
+	token, err := MakeJWT(userID, expires)
 	if err != nil {
 		t.Fatalf("MakeJWT failed: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestValidateJWT_Expired(t *testing.T) {
 	userID := uuid.New()
 	expires := -1 * time.Minute // already expired
 
-	token, err := MakeJWT(userID, secret, expires)
+	token, err := MakeJWT(userID, expires)
 	if err != nil {
 		t.Fatalf("MakeJWT failed: %v", err)
 	}
@@ -53,10 +53,15 @@ func TestValidateJWT_Expired(t *testing.T) {
 
 func TestValidateJWT_InvalidSignature(t *testing.T) {
 	userID := uuid.New()
-	token, err := MakeJWT(userID, "incorrect-test-secret", time.Minute)
+	token, err := MakeJWT(userID, time.Minute)
 	if err != nil {
 		t.Fatalf("MakeJWT failed: %v", err)
 	}
+
+	// Temporarily override TokenSecret for this test
+	oldSecret := TokenSecret
+	TokenSecret = "wrong-secret"
+	defer func() { TokenSecret = oldSecret }() // restore after test
 
 	_, err = ValidateJWT(token)
 	if err == nil {

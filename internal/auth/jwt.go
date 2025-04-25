@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,7 +20,7 @@ func init() {
 	TokenSecret = os.Getenv("JWT_SECRET")
 }
 
-func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+func MakeJWT(userID uuid.UUID, expiresIn time.Duration) (string, error) {
 	claims := jwt.RegisteredClaims{
 		Subject:   userID.String(),
 		Issuer:    "chirpy",
@@ -27,7 +30,7 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	signedToken, err := token.SignedString([]byte(tokenSecret))
+	signedToken, err := token.SignedString([]byte(TokenSecret))
 	if err != nil {
 		return "", err
 	}
@@ -41,6 +44,14 @@ func ValidateJWT(tokenString string) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 	return uuid.Parse(claims.Subject)
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", errors.New("authorization header missing Bearer prefix")
+	}
+	return strings.TrimPrefix(authHeader, "Bearer "), nil
 }
 
 func keyFunc(t *jwt.Token) (interface{}, error) {
