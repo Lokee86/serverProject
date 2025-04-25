@@ -60,7 +60,6 @@ func errorResponse(response http.ResponseWriter, code int, mesg string) {
 // internal server error, server error and log event
 func internalError(response http.ResponseWriter, err error) {
 	log.Printf("Internal Server Error: %v", err)
-	response.WriteHeader(http.StatusInternalServerError)
 	response.Write([]byte(err.Error()))
 }
 

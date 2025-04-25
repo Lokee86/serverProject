@@ -21,11 +21,12 @@ type apiConfig struct {
 }
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 type Chirp struct {
@@ -222,20 +223,28 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	var expiry int32
-	if params.ExpiresinSeconds == 0 {
-		expiry = 3600
-	} else if params.ExpiresinSeconds > 3600 {
-		expiry = 3600
-	} else {
-		expiry = params.ExpiresinSeconds
-	}
 	loggedInUser := jsonReturnUser(user)
-	token, err := auth.MakeJWT(loggedInUser.ID, time.Duration(expiry)*time.Second)
+	token, err := auth.MakeJWT(loggedInUser.ID, 3600*time.Second)
 	if err != nil {
 		internalError(response, err)
 		return
 	}
 	loggedInUser.Token = token
+	loggedInUser.RefreshToken, err = auth.MakeRefreshToken()
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	refreshTokenParams := database.CreateRefreshTokenParams{
+		Token:     loggedInUser.RefreshToken,
+		UserID:    loggedInUser.ID,
+		ExpiresAt: time.Now().Add(60 * 24 * time.Hour),
+	}
+	err = a.databaseQueries.CreateRefreshToken(r.Context(), refreshTokenParams)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+
 	jsonResponse(response, http.StatusOK, loggedInUser)
 }
