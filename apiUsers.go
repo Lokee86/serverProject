@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -17,6 +18,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 type handleUser struct {
@@ -99,6 +101,7 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 	jsonResponse(response, http.StatusOK, loggedInUser, "User logged in successfully")
 }
 
+// update user password and email
 func (a *apiConfig) updateAccount(response http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	newData := handleUser{}
@@ -131,4 +134,38 @@ func (a *apiConfig) updateAccount(response http.ResponseWriter, r *http.Request)
 	jsonData := jsonReturnUser(user)
 	jsonResponse(response, http.StatusOK, jsonData, "Account successfully updated")
 
+}
+
+func (a *apiConfig) upgradeAccount(response http.ResponseWriter, r *http.Request) {
+	type Upgrade struct {
+		Event string `json:"event"`
+		Data  struct {
+			UserID string `json:"user_id"`
+		} `json:"data"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	upgradeData := Upgrade{}
+	err := decoder.Decode(&upgradeData)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	if upgradeData.Event != "user.upgraded" {
+		noContentResponse(response, "Event not supported")
+		return
+	}
+	userID, err := uuid.Parse(upgradeData.Data.UserID)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	err = a.databaseQueries.ActivateChirpyRed(r.Context(), userID)
+	if err == sql.ErrNoRows {
+		errorResponse(response, http.StatusNotFound, "User not found")
+	} else if err != nil {
+		noContentResponse(response, err.Error())
+		return
+	}
+	noContentResponse(response, "User successfully upgraded")
 }

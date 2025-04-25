@@ -79,10 +79,11 @@ func jsonSafeChirp(chirp database.Chirp) Chirp {
 // Parse generated User struct into local json controled User struct - no HashedPassword field transferred
 func jsonReturnUser(user database.User) User {
 	newUserJson := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	return newUserJson
 }

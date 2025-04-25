@@ -33,6 +33,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("POST /api/login", apiCfg.loginHandler)
 	router.HandleFunc("POST /api/refresh", apiCfg.refreshHandler)
 	router.HandleFunc("POST /api/revoke", apiCfg.revokeHandler)
+	router.HandleFunc("POST /api/polka/webhooks", apiCfg.upgradeAccount)
 	return &http.Server{
 		Addr:    port,
 		Handler: router,
