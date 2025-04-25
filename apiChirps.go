@@ -1,10 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Lokee86/serverProject/internal/auth"
@@ -42,20 +42,13 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 
 // fetches a single chirp by id from table 'chirps' in database
 func (a *apiConfig) fetchSingleChirp(response http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 || parts[3] == "" {
-		errorResponse(response, http.StatusBadRequest, "chirp ID missing")
-		return
-	}
-	idStr, err := uuid.Parse(parts[3])
-	if err != nil {
-		internalError(response, err)
-		return
-	}
+	idStr := extractIDString(response, r.URL.Path)
 
 	chirp, err := a.databaseQueries.SelectSingleChirp(r.Context(), idStr)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		errorResponse(response, http.StatusNotFound, "Chirp not found")
+		return
+	} else if err != nil {
 		internalError(response, err)
 		return
 	}
@@ -109,4 +102,35 @@ func (a *apiConfig) addChirp(response http.ResponseWriter, checkedChirp handleCh
 	}
 	jsonSafeChirp := jsonSafeChirp(chirp)
 	jsonResponse(response, http.StatusCreated, jsonSafeChirp, "Chirp added successfully")
+}
+
+// remove chirp from database if user is autorized
+func (a *apiConfig) deleteChirp(response http.ResponseWriter, r *http.Request) {
+	userToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid access token")
+		return
+	}
+	userID, err := auth.ValidateJWT(userToken)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid access token")
+		return
+	}
+	idStr := extractIDString(response, r.URL.Path)
+	chirp, err := a.databaseQueries.SelectSingleChirp(r.Context(), idStr)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	if userID != chirp.UserID {
+		errorResponse(response, http.StatusForbidden, "Forbidden: Not your chirp")
+		return
+	}
+	err = a.databaseQueries.DeleteChirp(r.Context(), idStr)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	noContentResponse(response, "Chirp deleted successfully")
+
 }

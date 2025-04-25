@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Lokee86/serverProject/internal/database"
+	"github.com/google/uuid"
 )
 
 // readiness end point response - 200 OK
@@ -84,4 +85,25 @@ func jsonReturnUser(user database.User) User {
 		Email:     user.Email,
 	}
 	return newUserJson
+}
+
+// parse ID string from URL
+func extractIDString(response http.ResponseWriter, path string) uuid.UUID {
+	parts := strings.Split(path, "/")
+	if len(parts) < 4 || parts[3] == "" {
+		errorResponse(response, http.StatusBadRequest, "chirp ID missing")
+		return uuid.Nil
+	}
+	idStr, err := uuid.Parse(parts[3])
+	if err != nil {
+		internalError(response, err)
+		return uuid.Nil
+	}
+	return idStr
+}
+
+// return a 204 No Content response
+func noContentResponse(response http.ResponseWriter, mesg string) {
+	response.WriteHeader(http.StatusNoContent)
+	log.Printf("Status: %v Reponse successfuly sent. %v", http.StatusNoContent, mesg)
 }

@@ -27,6 +27,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("POST /api/chirps", apiCfg.validateChirp)
 	router.HandleFunc("GET /api/chirps/", apiCfg.fetchChirps)
 	router.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.fetchSingleChirp)
+	router.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)
 	router.HandleFunc("POST /api/users", apiCfg.createUserHandler)
 	router.HandleFunc("PUT /api/users", apiCfg.updateAccount)
 	router.HandleFunc("POST /api/login", apiCfg.loginHandler)

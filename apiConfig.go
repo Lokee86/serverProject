@@ -105,9 +105,8 @@ func (a *apiConfig) revokeHandler(response http.ResponseWriter, r *http.Request)
 	}
 	err = a.databaseQueries.RevokeRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		internalError(response, err)
+		errorResponse(response, http.StatusUnauthorized, "Invalid refresh token")
 		return
 	}
-	response.WriteHeader(http.StatusNoContent)
-	log.Println("204 Reponse successfuly sent")
+	noContentResponse(response, "Refresh token revoked")
 }
