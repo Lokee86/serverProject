@@ -98,3 +98,37 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 
 	jsonResponse(response, http.StatusOK, loggedInUser, "User logged in successfully")
 }
+
+func (a *apiConfig) updateAccount(response http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	newData := handleUser{}
+	err := decoder.Decode(&newData)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	userToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid access token")
+		return
+	}
+	userID, err := auth.ValidateJWT(userToken)
+	if err != nil {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized: Invalid access token")
+		return
+	}
+	user, err := a.databaseQueries.GetUserByID(r.Context(), userID)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	user.Email = newData.Email
+	user.HashedPassword, err = auth.HashPassword(newData.Password)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	jsonData := jsonReturnUser(user)
+	jsonResponse(response, http.StatusOK, jsonData, "Account successfully updated")
+
+}
