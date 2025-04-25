@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -46,6 +47,10 @@ type handleUser struct {
 	Email            string `json:"email"`
 	Password         string `json:"password"`
 	ExpiresinSeconds int32  `json:"expires_in_seconds"`
+}
+
+type token struct {
+	Token string `json:"token"`
 }
 
 // fetches all chirps from table 'chirps' in database
@@ -97,7 +102,6 @@ func (a *apiConfig) validateChirp(response http.ResponseWriter, r *http.Request)
 		return
 	}
 	checkedChirp.UserID, err = auth.ValidateJWT(userToken)
-	// log.Println(err.Error())
 	if err != nil {
 		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
 		return
@@ -247,4 +251,34 @@ func (a *apiConfig) loginHandler(response http.ResponseWriter, r *http.Request) 
 	}
 
 	jsonResponse(response, http.StatusOK, loggedInUser)
+}
+
+// handle requests for access tokens through refresh endpoint
+func (a *apiConfig) refreshHandler(response http.ResponseWriter, r *http.Request) {
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	fullRefreshToken, err := a.databaseQueries.GetRefreshToken(r.Context(), refreshToken)
+	if err == sql.ErrNoRows {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorized")
+		return
+	} else if err != nil {
+		internalError(response, err)
+		return
+	}
+	if time.Now().After(fullRefreshToken.ExpiresAt) {
+		errorResponse(response, http.StatusUnauthorized, "Unauthorize")
+		return
+	}
+	newAccessTokenValue, err := auth.MakeJWT(fullRefreshToken.UserID, 60*time.Minute)
+	if err != nil {
+		internalError(response, err)
+		return
+	}
+	newAccessToken := token{
+		Token: newAccessTokenValue,
+	}
+	jsonResponse(response, http.StatusNoContent, newAccessToken)
 }

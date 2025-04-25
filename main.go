@@ -29,6 +29,7 @@ func createServer(apiCfg *apiConfig) *http.Server {
 	router.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.fetchSingleChirp)
 	router.HandleFunc("POST /api/users", apiCfg.createUserHandler)
 	router.HandleFunc("POST /api/login", apiCfg.loginHandler)
+	router.HandleFunc("POST /api/refresh", apiCfg.refreshHandler)
 	return &http.Server{
 		Addr:    port,
 		Handler: router,
