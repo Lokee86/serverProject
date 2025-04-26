@@ -27,17 +27,49 @@ type handleChirp struct {
 
 // fetches all chirps from table 'chirps' in database
 func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
-	chirps, err := a.databaseQueries.GetAllChirps(r.Context())
-	if err != nil {
-		internalError(response, err)
-		return
-	}
+	idQuery := r.URL.Query().Get("author_id")
+	sortQuery := r.URL.Query().Get("sort")
+	var chirps []database.Chirp
+	var err error
+	var uuidQuery uuid.UUID
 	var jsonSafeChirps []Chirp
-	for _, chirp := range chirps {
-		jsonSafeChirp := jsonSafeChirp(chirp)
-		jsonSafeChirps = append(jsonSafeChirps, jsonSafeChirp)
+
+	if idQuery != "" {
+		uuidQuery, err = uuid.Parse(idQuery)
+		if err != nil {
+			internalError(response, err)
+			return
+		}
+
+		chirps, err = a.databaseQueries.GetChirpsByID(r.Context(), uuidQuery)
+
+		if err == sql.ErrNoRows {
+			errorResponse(response, http.StatusNotFound, "Not Found: No chirps from that ID")
+			return
+		} else if err != nil {
+			internalError(response, err)
+			return
+		}
+		for _, chirp := range chirps {
+			jsonSafeChirp := jsonSafeChirp(chirp)
+			jsonSafeChirps = append(jsonSafeChirps, jsonSafeChirp)
+		}
+		jsonResponse(response, http.StatusOK, jsonSafeChirps, "Fetched chirps from provided ID")
+	} else {
+		if err == sql.ErrNoRows {
+			errorResponse(response, http.StatusNotFound, "Not Found: No chirps from that ID")
+			return
+		} else if err != nil {
+			internalError(response, err)
+			return
+		}
+		for _, chirp := range chirps {
+			jsonSafeChirp := jsonSafeChirp(chirp)
+			jsonSafeChirps = append(jsonSafeChirps, jsonSafeChirp)
+		}
+		jsonResponse(response, http.StatusOK, jsonSafeChirps, "All chirps fetched")
 	}
-	jsonResponse(response, http.StatusOK, jsonSafeChirps, "All Chirps fetched")
+
 }
 
 // fetches a single chirp by id from table 'chirps' in database
