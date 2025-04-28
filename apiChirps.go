@@ -41,7 +41,11 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		chirps, err = a.databaseQueries.GetChirpsByID(r.Context(), uuidQuery)
+		if sortQuery == "desc" {
+			chirps, err = a.databaseQueries.GetChirpsByIDDesc(r.Context(), uuidQuery)
+		} else {
+			chirps, err = a.databaseQueries.GetChirpsByID(r.Context(), uuidQuery)
+		}
 
 		if err == sql.ErrNoRows {
 			errorResponse(response, http.StatusNotFound, "Not Found: No chirps from that ID")
@@ -56,8 +60,14 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 		}
 		jsonResponse(response, http.StatusOK, jsonSafeChirps, "Fetched chirps from provided ID")
 	} else {
+		if sortQuery == "desc" {
+			chirps, err = a.databaseQueries.GetAllChirpsDesc(r.Context())
+		} else {
+			chirps, err = a.databaseQueries.GetAllChirps(r.Context())
+		}
+
 		if err == sql.ErrNoRows {
-			errorResponse(response, http.StatusNotFound, "Not Found: No chirps from that ID")
+			errorResponse(response, http.StatusNotFound, "Error: No Chirps in Database")
 			return
 		} else if err != nil {
 			internalError(response, err)
@@ -69,7 +79,6 @@ func (a *apiConfig) fetchChirps(response http.ResponseWriter, r *http.Request) {
 		}
 		jsonResponse(response, http.StatusOK, jsonSafeChirps, "All chirps fetched")
 	}
-
 }
 
 // fetches a single chirp by id from table 'chirps' in database
