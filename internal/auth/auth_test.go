@@ -1,10 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -48,6 +51,16 @@ func TestValidateJWT_Expired(t *testing.T) {
 	_, err = ValidateJWT(token)
 	if err == nil {
 		t.Fatal("expected error for expired token, got none")
+	}
+
+	// Check if the error is actually a token expiry error
+	_, err = ValidateJWT(token)
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			// Token is expired (expected case)
+		} else {
+			t.Fatalf("expected token expired error, got: %v", err)
+		}
 	}
 }
 
